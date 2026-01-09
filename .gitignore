@@ -1,0 +1,17 @@
+# Ignore EDA tool databases and lock files
+db/
+incremental_db/
+*.flock
+*.quiproj.*
+
+# Ignore simulation artifacts
+work/
+transcript
+*.vstf
+*.wlf
+
+# Ignore ModelSim/Questa simulation directories
+simulation/
+/output_files/
+*.rpt
+
