@@ -15,3 +15,6 @@ simulation/
 /output_files/
 *.rpt
 
+modelsim.ini
+uvm_lib
+

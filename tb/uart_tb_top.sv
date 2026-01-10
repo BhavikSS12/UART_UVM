@@ -5,6 +5,7 @@
 module uart_tb_top;
     
     import uvm_pkg::*;
+    import uart_pkg::*;
     `include "uvm_macros.svh"
     
     // Clock generation
