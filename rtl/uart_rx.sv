@@ -1,135 +1,152 @@
-// UART Receiver Module
-module uart_rx #(
-    parameter CLKS_PER_BIT = 868
-)(
-    input  logic       clk,
-    input  logic       rst_n,
-    input  logic       rx_serial,
-    output logic [7:0] rx_data,
-    output logic       rx_done,
-    output logic       parity_error,
-    output logic       frame_error
+module uart_rx(
+    input clk,
+    input rst,
+    input rx,
+    output reg [7:0]rx_msg,
+    output reg rx_parity,
+    output reg rx_busy,
+    output reg error_flag
 );
-
-    typedef enum logic [2:0] {
-        IDLE    = 3'b000,
-        START   = 3'b001,
-        DATA    = 3'b010,
-        PARITY  = 3'b011,
-        STOP    = 3'b100,
-        CLEANUP = 3'b101
-    } state_t;
-
-    state_t state;
-    logic [15:0] clk_count;
-    logic [2:0]  bit_index;
-    logic [7:0]  rx_data_reg;
-    logic        rx_serial_reg;
-    logic        parity_bit;
-    logic        calc_parity;
-
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            state         <= IDLE;
-            clk_count     <= 0;
-            bit_index     <= 0;
-            rx_data       <= 8'h00;
-            rx_data_reg   <= 8'h00;
-            rx_done       <= 1'b0;
-            parity_error  <= 1'b0;
-            frame_error   <= 1'b0;
-            rx_serial_reg <= 1'b1;
-            parity_bit    <= 1'b0;
-        end else begin
-            rx_serial_reg <= rx_serial;
+    localparam idle = 3'd0;
+    localparam start_bit = 3'd1;
+    localparam data_bit = 3'd2;
+    localparam parity_bit = 3'd3;
+    localparam stop_bit = 3'd4;
+    localparam done = 3'd5;
+    
+    localparam clk_per_bit = 434;//baudrate = 115200
+    
+    reg rx_sync_1, rx_sync_2;
+    reg [2:0] state;
+    reg [9:0] cycle_count;
+    reg [7:0] data_reg;
+    reg [2:0]bit_index;
+    
+    initial begin
+        rx_busy = 1'd0;
+        rx_msg = 8'd0;
+        rx_parity = 1'd0;
+        state = idle;
+        error_flag = 1'd0;
+    end
+    
+    always @(posedge clk) begin
+        if(rst) begin
+            rx_sync_1 <= 1'b1;
+            rx_sync_2 <= 1'b1;
+            state <= idle;
+            data_reg <= 8'd0;
+            rx_msg <= 8'd0;
+            rx_parity <= 1'd0;
+            cycle_count <= 10'd0; 
+            error_flag <= 1'd0;
+            bit_index <= 3'd0; 
+        end
+        else begin
+        rx_sync_1 <= rx;
+        rx_sync_2 <= rx_sync_1;
+        case(state) 
+            idle: begin
+                rx_busy <= 1'd0;
+                data_reg <= 8'd0;
+                rx_parity <= 1'd0;
+                cycle_count <= 10'd0; 
+                bit_index <= 3'd0;
+                if (rx_sync_2 == 1'd0) begin
+                    error_flag <= 1'd0;
+                    state <= start_bit;
+                end
+            end
             
-            case (state)
-                IDLE: begin
-                    rx_done      <= 1'b0;
-                    clk_count    <= 0;
-                    bit_index    <= 0;
-                    parity_error <= 1'b0;
-                    frame_error  <= 1'b0;
-                    
-                    if (rx_serial_reg == 1'b0) begin  // Start bit detected
-                        state <= START;
+            start_bit: begin
+                rx_busy <= 1'b1;
+            
+                if(cycle_count == (clk_per_bit-1)/2) begin
+                    if(rx_sync_2 != 1'b0) begin
+                        error_flag <= 1'b1;
+                        cycle_count <= 0;
+                        state <= idle;
+                    end
+                    else begin
+                        cycle_count <= cycle_count + 1;
                     end
                 end
-                
-                START: begin
-                    if (clk_count == (CLKS_PER_BIT - 1) / 2) begin
-                        if (rx_serial_reg == 1'b0) begin
-                            clk_count <= 0;
-                            state     <= DATA;
-                        end else begin
-                            state <= IDLE;  // False start
-                        end
-                    end else begin
-                        clk_count <= clk_count + 1;
+                else if(cycle_count == clk_per_bit-1) begin
+                    cycle_count <= 0;
+                    state <= data_bit;
+                end
+                else begin
+                    cycle_count <= cycle_count + 1;
+                end
+            end
+            
+            data_bit:begin
+                rx_busy <= 1'd1;
+                if(cycle_count == (clk_per_bit -1)/2) begin
+                        data_reg[bit_index] <= rx_sync_2;
+                end 
+                if(cycle_count == clk_per_bit -1) begin
+                    cycle_count <= 10'd0;
+                    if (bit_index == 3'd7) begin
+                        state <= parity_bit;
+                    end
+                    else begin
+                        bit_index <= bit_index + 1; 
+                    end 
+                end
+                else begin
+                    cycle_count <= cycle_count + 1;
+                end
+            end
+            
+            parity_bit:begin
+                rx_busy <= 1'd1;
+                if(cycle_count == (clk_per_bit -1)/2) begin
+                        rx_parity <= rx_sync_2;
+                end 
+                if(cycle_count == clk_per_bit -1) begin
+                    cycle_count <= 10'd0;
+                    state <= stop_bit;
+                end 
+                else begin
+                    cycle_count <= cycle_count + 1;
+                end
+            end
+            
+            stop_bit:begin
+                rx_busy <= 1'd1;
+                if(cycle_count == (clk_per_bit-1)/2) begin
+                    if(rx_sync_2 != 1'b1) begin
+                        error_flag <= 1'b1;
+                        cycle_count <= 0;
+                        state <= idle;
+                    end
+                    else begin
+                        cycle_count <= cycle_count + 1;
                     end
                 end
-                
-                DATA: begin
-                    if (clk_count < CLKS_PER_BIT - 1) begin
-                        clk_count <= clk_count + 1;
-                    end else begin
-                        clk_count                <= 0;
-                        rx_data_reg[bit_index]   <= rx_serial_reg;
-                        
-                        if (bit_index < 7) begin
-                            bit_index <= bit_index + 1;
-                        end else begin
-                            bit_index <= 0;
-                            state     <= PARITY;
-                        end
-                    end
+                else if(cycle_count == clk_per_bit-1) begin
+                    cycle_count <= 0;
+                    state <= done;
                 end
-                
-                PARITY: begin
-                    if (clk_count < CLKS_PER_BIT - 1) begin
-                        clk_count <= clk_count + 1;
-                    end else begin
-                        clk_count    <= 0;
-                        parity_bit   <= rx_serial_reg;
-                        calc_parity  <= ^rx_data_reg;  // Even parity
-                        state        <= STOP;
-                    end
+                else begin
+                    cycle_count <= cycle_count + 1;
                 end
-                
-                STOP: begin
-                    if (clk_count < CLKS_PER_BIT - 1) begin
-                        clk_count <= clk_count + 1;
-                    end else begin
-                        clk_count <= 0;
-                        
-                        // Check stop bit
-                        if (rx_serial_reg == 1'b1) begin
-                            frame_error <= 1'b0;
-                        end else begin
-                            frame_error <= 1'b1;
-                        end
-                        
-                        // Check parity
-                        if (parity_bit == calc_parity) begin
-                            parity_error <= 1'b0;
-                        end else begin
-                            parity_error <= 1'b1;
-                        end
-                        
-                        rx_data  <= rx_data_reg;
-                        rx_done  <= 1'b1;
-                        state    <= CLEANUP;
-                    end
+            end
+            
+            done: begin
+                rx_busy <= 1'd0;
+                rx_msg <= data_reg;
+                if(^{data_reg} == rx_parity)begin
+                    error_flag <= 1'd0;
                 end
-                
-                CLEANUP: begin
-                    rx_done <= 1'b0;
-                    state   <= IDLE;
+                else begin
+                    error_flag <= 1'd1;
                 end
-                
-                default: state <= IDLE;
-            endcase
+                state <= idle;
+            end
+        endcase
+        
         end
     end
-
 endmodule
