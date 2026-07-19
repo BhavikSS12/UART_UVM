@@ -61,36 +61,32 @@ class uart_monitor extends uvm_monitor;
 
         forever
         begin
+            // Wait for rx_busy to become active (start of reception)
+            @(vif.monitor_cb);
+            while (vif.monitor_cb.rx_busy !== 1'b1) begin
+                @(vif.monitor_cb);
+            end
 
-            //----------------------------------------------------
-            // Wait until receiver finishes
-            //----------------------------------------------------
-            @(negedge vif.rx_busy);
+            // Wait for rx_busy to become inactive (end of reception)
+            while (vif.monitor_cb.rx_busy === 1'b1) begin
+                @(vif.monitor_cb);
+            end
 
-            //----------------------------------------------------
             // Create Transaction
-            //----------------------------------------------------
             tr = uart_transaction::type_id::create("tr");
 
-            //----------------------------------------------------
-            // Collect DUT Outputs
-            //----------------------------------------------------
-            tr.data        = vif.rx_msg;
-            tr.parity_type = vif.rx_parity;
+            // Collect DUT Outputs synchronously via clocking block
+            tr.rx_data     = vif.monitor_cb.rx_msg;
+            tr.rx_parity   = vif.monitor_cb.rx_parity;
+            tr.error_flag  = vif.monitor_cb.error_flag;
 
-            //----------------------------------------------------
             // Send to Scoreboard
-            //----------------------------------------------------
             ap.write(tr);
 
-            //----------------------------------------------------
-            // Print
-            //----------------------------------------------------
             `uvm_info("MONITOR",
                       $sformatf("Received : %s",
                                 tr.convert2string()),
                       UVM_LOW)
-
         end
 
     endtask

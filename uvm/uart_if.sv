@@ -25,6 +25,22 @@ interface uart_if(input logic clk);
     logic rx_busy;
     logic error_flag;
 
+    //clocking block driver
+    clocking driver_cb @(posedge clk);
+        default input #1step output #1ns;
+        output rst , tx_start , parity_type, data_in;
+        input tx , tx_done;
+    endclocking
+
+    clocking monitor_cb @(posedge clk);
+        default input #1step output #1ns;
+        input rst , tx_start , tx , tx_done;
+        input rx_msg , rx_parity , rx_busy , error_flag;
+    endclocking
+
+    modport DRIVER (clocking driver_cb , input clk);
+    modport MONITOR (clocking monitor_cb , input clk);
+
 endinterface
 
 `endif

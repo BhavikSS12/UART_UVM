@@ -54,17 +54,8 @@ class uart_transaction extends uvm_sequence_item;
     // Print Function
     //------------------------------------------------------------
     function string convert2string();
-
         return $sformatf(
-        "\nTX_DATA        = %02h\
-         \nPARITY_TYPE    = %0b\
-         \nRX_DATA        = %02h\
-         \nRX_PARITY      = %0b\
-         \nERROR_FLAG     = %0b\
-         \nPARITY_ERROR   = %0b\
-         \nFRAMING_ERROR  = %0b\
-         \nFALSE_START    = %0b",
-
+            "data=8'h%02h, parity_type=%0b, rx_data=8'h%02h, rx_parity=%0b, error_flag=%0b, parity_err_inj=%0b, framing_err_inj=%0b, false_start_inj=%0b",
             data,
             parity_type,
             rx_data,
@@ -73,9 +64,7 @@ class uart_transaction extends uvm_sequence_item;
             inject_parity_error,
             inject_framing_error,
             inject_false_start
-
         );
-
     endfunction
 
 endclass
