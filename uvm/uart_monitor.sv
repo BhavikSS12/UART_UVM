@@ -3,29 +3,19 @@
 
 class uart_monitor extends uvm_monitor;
 
-    //------------------------------------------------------------
     // Factory Registration
-    //------------------------------------------------------------
     `uvm_component_utils(uart_monitor)
 
-    //------------------------------------------------------------
     // Virtual Interface
-    //------------------------------------------------------------
     virtual uart_if vif;
 
-    //------------------------------------------------------------
     // Analysis Port
-    //------------------------------------------------------------
     uvm_analysis_port #(uart_transaction) ap;
 
-    //------------------------------------------------------------
     // Transaction Handle
-    //------------------------------------------------------------
     uart_transaction tr;
 
-    //------------------------------------------------------------
     // Constructor
-    //------------------------------------------------------------
     function new(string name = "uart_monitor",
                  uvm_component parent);
 
@@ -35,9 +25,7 @@ class uart_monitor extends uvm_monitor;
 
     endfunction
 
-    //------------------------------------------------------------
     // Build Phase
-    //------------------------------------------------------------
     function void build_phase(uvm_phase phase);
 
         super.build_phase(phase);
@@ -54,9 +42,7 @@ class uart_monitor extends uvm_monitor;
 
     endfunction
 
-    //------------------------------------------------------------
     // Run Phase
-    //------------------------------------------------------------
     task run_phase(uvm_phase phase);
 
         forever

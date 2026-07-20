@@ -3,21 +3,15 @@
 
 class uart_env extends uvm_env;
 
-    //------------------------------------------------------------
     // Factory Registration
-    //------------------------------------------------------------
     `uvm_component_utils(uart_env)
 
-    //------------------------------------------------------------
     // Components
-    //------------------------------------------------------------
     uart_agent agent;
 
     uart_scoreboard scoreboard;
 
-    //------------------------------------------------------------
     // Constructor
-    //------------------------------------------------------------
     function new(string name = "uart_env",
                  uvm_component parent);
 
@@ -25,9 +19,7 @@ class uart_env extends uvm_env;
 
     endfunction
 
-    //------------------------------------------------------------
     // Build Phase
-    //------------------------------------------------------------
     function void build_phase(uvm_phase phase);
 
         super.build_phase(phase);
@@ -44,23 +36,17 @@ class uart_env extends uvm_env;
 
     endfunction
 
-    //------------------------------------------------------------
     // Connect Phase
-    //------------------------------------------------------------
     function void connect_phase(uvm_phase phase);
 
         super.connect_phase(phase);
 
-        //---------------------------------------------
         // Driver → Expected FIFO
-        //---------------------------------------------
         agent.driver.ap.connect(
             scoreboard.exp_fifo.analysis_export
         );
 
-        //---------------------------------------------
         // Monitor → Actual FIFO
-        //---------------------------------------------
         agent.monitor.ap.connect(
             scoreboard.act_fifo.analysis_export
         );

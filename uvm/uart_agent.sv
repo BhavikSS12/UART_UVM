@@ -3,21 +3,15 @@
 
 class uart_agent extends uvm_agent;
 
-    //------------------------------------------------------------
     // Factory Registration
-    //------------------------------------------------------------
     `uvm_component_utils(uart_agent)
 
-    //------------------------------------------------------------
     // Components
-    //------------------------------------------------------------
     uart_driver    driver;
     uart_monitor   monitor;
     uart_sequencer sequencer;
 
-    //------------------------------------------------------------
     // Constructor
-    //------------------------------------------------------------
     function new(string name = "uart_agent",
                  uvm_component parent);
 
@@ -25,9 +19,7 @@ class uart_agent extends uvm_agent;
 
     endfunction
 
-    //------------------------------------------------------------
     // Build Phase
-    //------------------------------------------------------------
     function void build_phase(uvm_phase phase);
 
         super.build_phase(phase);
@@ -49,9 +41,7 @@ class uart_agent extends uvm_agent;
 
     endfunction
 
-    //------------------------------------------------------------
     // Connect Phase
-    //------------------------------------------------------------
     function void connect_phase(uvm_phase phase);
 
         super.connect_phase(phase);
